@@ -111,7 +111,7 @@ main(void)
 	printf("nothing to see... %s\n", "yet");
 	struct gmi *g = gmi_new();
 
-	struct line_list *ll;
+	struct line_list *ll = NULL;
        	push_line(ll, "some line\n");
 	
 	return 0;
