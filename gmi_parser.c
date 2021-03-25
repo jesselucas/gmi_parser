@@ -112,7 +112,13 @@ main(void)
 	struct gmi *g = gmi_new();
 
 	struct line_list *ll = NULL;
-       	push_line(ll, "some line\n");
+       	ll = push_line(ll, "some line\n");
+       	ll = push_line(ll, "some other line\n");
+       	ll = push_line(ll, "a third line\n");
 	
+	struct line *l = NULL;
+	SLIST_FOREACH(l, ll, next)       /* Forward traversal. */
+		printf("%s", l->line);
+
 	return 0;
 }
