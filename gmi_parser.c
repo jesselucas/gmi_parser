@@ -107,7 +107,7 @@ gmi_parse_line(struct gmi *g, char *line)
 	/* Parse line to determine type */
 
 	/* Push to line list */
-       	g->lines = push_line(g->lines, line); 
+	g->lines = push_line(g->lines, line); 
 }
 
 /*
@@ -128,9 +128,9 @@ main(void)
 	printf("nothing to see... %s\n", "yet");
 	struct gmi *g = gmi_new();
 
-       	gmi_parse_line(g, "some line\n");
-       	gmi_parse_line(g, "some other line\n");
-       	gmi_parse_line(g, "third line\n");
+	gmi_parse_line(g, "some line\n");
+	gmi_parse_line(g, "some other line\n");
+	gmi_parse_line(g, "third line\n");
 	
 	struct line *l = NULL;
 	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
