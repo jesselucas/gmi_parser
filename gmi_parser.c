@@ -5,8 +5,8 @@
 
 /*
  * Simple text/gemini parser
- * gemini://gemini.circumlunar.space:1965/docs/specification.gmi
- * Based on v0.14.3, November 29th 2020
+ * https://gitlab.com/gemini-specification/gemini-text/-/blob/master/specification.gmi
+ * Based on V0.15.0, March 5th, 2021
  *
  * Four core line types (in any order)
  * Text lines
@@ -30,18 +30,19 @@ enum linetype { TEXT, LINK, PRE_TOGGLE, PRE_TEXT, HEADING, LIST, QUOTE };
 struct line {
 	SLIST_ENTRY(line) 	 next;
 	int 			 number;
-	enum 			 linetype type;
+	enum linetype 		 type;
 	char 			*line;
+	void			*data;
 };
 SLIST_HEAD(line_list, line);
 
 struct line 		*line_new();
 struct line_list 	*push_line(struct line_list *ll, char *list);
 struct gmi		*gmi_new();
-int		 	 gmi_parseline(struct gmi *,  char *);
+void		 	 gmi_parse_line(struct gmi *,  char *);
 
 /*
- * create a new line struct to represent
+ * Create a new line struct to represent
  * each of the line types. Typically stored on
  * a gmi struct 
  */
@@ -76,31 +77,38 @@ push_line(struct line_list *ll, char *line)
 	return ll;
 }
 
-struct {
+struct gmi {
 	struct line_list 	*lines;
-} gmi;
+};
 
 /*
- * create a new gmi struct to represent the entirity 
+ * Create a new gmi struct to represent the entirity 
  * of a single .gmi document
  */
 struct gmi *
 gmi_new()
 {
 	struct gmi *g;
-	if ((g = calloc(1, sizeof(gmi))) == NULL)
+	if ((g = calloc(1, sizeof(struct gmi))) == NULL)
 		err(1, NULL);
+	g->lines = NULL;
 
 	return g;
 }
 
 /* Parse line to gmi struct */
-int
-gmi_parseline(struct gmi *g, char *line) 
+void
+gmi_parse_line(struct gmi *g, char *line) 
 {
-	return 0;		
-}
+	/* TODO create an return gmi struct ? */
+	if(g == NULL) 
+		err(1, NULL);
 
+	/* Parse line to determine type */
+
+	/* Push to line list */
+       	g->lines = push_line(g->lines, line); 
+}
 
 /*
  * main currently used for testing
@@ -108,16 +116,24 @@ gmi_parseline(struct gmi *g, char *line)
 int
 main(void) 
 {
+	char *gem_test = "All the following examples are valid link lines:\n" 
+	       	"=> gemini://example.org/\n"
+		"=> gemini://example.org/ An example link\n"
+		"=> gemini://example.org/foo     Another example link at the same host"
+		"=> foo/bar/baz.txt      A relative link\n"
+		"=>      gopher://example.org:70/1 A gopher link\n";
+		
+		
+
 	printf("nothing to see... %s\n", "yet");
 	struct gmi *g = gmi_new();
 
-	struct line_list *ll = NULL;
-       	ll = push_line(ll, "some line\n");
-       	ll = push_line(ll, "some other line\n");
-       	ll = push_line(ll, "a third line\n");
+       	gmi_parse_line(g, "some line\n");
+       	gmi_parse_line(g, "some other line\n");
+       	gmi_parse_line(g, "third line\n");
 	
 	struct line *l = NULL;
-	SLIST_FOREACH(l, ll, next)       /* Forward traversal. */
+	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
 		printf("%s", l->line);
 
 	return 0;
