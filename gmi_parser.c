@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <err.h>
 #include <sys/queue.h>
 
@@ -10,14 +11,14 @@
  *
  * Four core line types (in any order)
  * Text lines
- * Link lines
- * Preformatting toggle lines
- * Preformatted text lines
+ * Link lines =>
+ * Preformatting toggle lines ```
+ * Preformatted text lines 
  *
  * Three advanced line types
- * Heading lines
- * Unordered list items
- * Quote lines 
+ * Heading lines #, ##, ###
+ * Unordered list items *
+ * Quote lines >
  */
 
 /* notes to self
@@ -40,6 +41,7 @@ struct line 		*line_new();
 struct line_list 	*push_line(struct line_list *ll, char *list);
 struct gmi		*gmi_new();
 void		 	 gmi_parse_line(struct gmi *,  char *);
+struct line		*line_parse(char *);
 
 /*
  * Create a new line struct to represent
@@ -100,14 +102,56 @@ gmi_new()
 void
 gmi_parse_line(struct gmi *g, char *line) 
 {
-	/* TODO create an return gmi struct ? */
+	/* TODO create and return gmi struct ? */
 	if(g == NULL) 
 		err(1, NULL);
 
 	/* Parse line to determine type */
+	line_parse(line);
 
 	/* Push to line list */
 	g->lines = push_line(g->lines, line); 
+}
+
+struct line *
+line_parse (char *line) 
+{
+	if (line == NULL) 
+		return NULL;
+
+	size_t len = strlen(line);	
+	if (len <= 0) 
+		return NULL;
+
+	// Check fist three characters for toggle
+	if (len >= 3) {
+		if(line[0] == '`' && line[1] == '`' && line[2] == '`') 
+			printf("toggle format\n");
+	}
+
+	switch (line[0]) {
+		case '=':
+		       printf("parse link\n");	
+		       break;
+		case '#':
+		       printf("parse header\n");	
+		       break;
+		case '*':
+		       printf("parse list\n");	
+		       break;
+		case '>':
+		       printf("parse paragraph\n");	
+		       break;
+		default:
+		       printf("text\n");
+	}
+	
+	// Determine line type		
+	for(int i = 0; i < (int) len; i++) {
+		char c = line[i];
+	}
+
+	return NULL;
 }
 
 /*
@@ -116,25 +160,26 @@ gmi_parse_line(struct gmi *g, char *line)
 int
 main(void) 
 {
-	char *gem_test = "All the following examples are valid link lines:\n" 
+	printf("nothing to see... %s\n", "yet");
+	char *gem_test = strdup("All the following examples are valid link lines:\n" 
 	       	"=> gemini://example.org/\n"
 		"=> gemini://example.org/ An example link\n"
 		"=> gemini://example.org/foo     Another example link at the same host"
 		"=> foo/bar/baz.txt      A relative link\n"
-		"=>      gopher://example.org:70/1 A gopher link\n";
-		
-		
-
-	printf("nothing to see... %s\n", "yet");
+		"=>      gopher://example.org:70/1 A gopher link\n");
+	
 	struct gmi *g = gmi_new();
+	char *text_line;	
+	while( (text_line = strsep(&gem_test, "\n")) != NULL )
+		gmi_parse_line(g, text_line);
 
-	gmi_parse_line(g, "some line\n");
-	gmi_parse_line(g, "some other line\n");
-	gmi_parse_line(g, "third line\n");
+
+	// gmi_parse_line(g, "some other line\n");
+	// gmi_parse_line(g, "third line\n");
 	
 	struct line *l = NULL;
 	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
-		printf("%s", l->line);
+		printf("%s\n", l->line);
 
 	return 0;
 }
