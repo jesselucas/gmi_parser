@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <err.h>
 #include <sys/queue.h>
 
@@ -27,21 +28,32 @@
  * use scanf
  */
 
-enum linetype { TEXT, LINK, PRE_TOGGLE, PRE_TEXT, HEADING, LIST, QUOTE };
+enum linetype {
+	TEXT,
+	LINK,
+	PRE_TOGGLE,
+	PRE_TEXT,
+	HEADING_1,
+	HEADING_2,
+	HEADING_3,
+	LIST,
+	QUOTE
+};
+
+struct line 		*line_new();
+struct line_list 	*push_line(struct line_list *, enum linetype, int, char *);
+struct gmi		*gmi_new();
+void		 	 gmi_parse_line(struct gmi *, int, char *);
+struct line		*line_parse(char *);
+
 struct line {
 	SLIST_ENTRY(line) 	 next;
 	int 			 number;
 	enum linetype 		 type;
 	char 			*line;
-	void			*data;
+	_Bool			 preformatted;
 };
 SLIST_HEAD(line_list, line);
-
-struct line 		*line_new();
-struct line_list 	*push_line(struct line_list *ll, char *list);
-struct gmi		*gmi_new();
-void		 	 gmi_parse_line(struct gmi *,  char *);
-struct line		*line_parse(char *);
 
 /*
  * Create a new line struct to represent
@@ -59,7 +71,7 @@ line_new()
 }
 
 struct line_list *
-push_line(struct line_list *ll, char *line)
+push_line(struct line_list *ll, enum linetype type, int number, char *line)
 {
 	struct line *l;
 
@@ -73,6 +85,8 @@ push_line(struct line_list *ll, char *line)
 		free(ll);
 		err(1, NULL);
 	}
+	l->type = type;
+	l->number = number;
 	l->line = line;
 	SLIST_INSERT_HEAD(ll, l, next);
 
@@ -81,6 +95,7 @@ push_line(struct line_list *ll, char *line)
 
 struct gmi {
 	struct line_list 	*lines;
+	_Bool 			 preformat_mode;
 };
 
 /*
@@ -100,58 +115,58 @@ gmi_new()
 
 /* Parse line to gmi struct */
 void
-gmi_parse_line(struct gmi *g, char *line) 
+gmi_parse_line(struct gmi *g, int line_number, char *line)
 {
-	/* TODO create and return gmi struct ? */
-	if(g == NULL) 
+	if(g == NULL)
 		err(1, NULL);
 
-	/* Parse line to determine type */
-	line_parse(line);
-
-	/* Push to line list */
-	g->lines = push_line(g->lines, line); 
-}
-
-struct line *
-line_parse (char *line) 
-{
 	if (line == NULL) 
-		return NULL;
+		err(1, NULL);
+
+	enum linetype line_type = TEXT;
 
 	size_t len = strlen(line);	
 	if (len <= 0) 
-		return NULL;
+		return;
 
-	// Check fist three characters for toggle
-	if (len >= 3) {
-		if(line[0] == '`' && line[1] == '`' && line[2] == '`') 
-			printf("toggle format\n");
+	/* If preformat mode is on toggle it off when ``` */
+	if (g->preformat_mode == true) {
+		if (len >= 3) {
+			if(line[0] == '`' && line[1] == '`' && line[2] == '`') {
+				g->preformat_mode = false;
+				line_type = PRE_TOGGLE;
+				goto done;
+			}
+		}
+
+		line_type = PRE_TEXT;
+		goto done;
 	}
 
 	switch (line[0]) {
 		case '=':
-		       printf("parse link\n");	
-		       break;
+			line_type = LINK;
+			break;
+		case '`':
+			if (len >= 3 && line[1] == '`' && line[2] == '`') {
+				g->preformat_mode = true;
+				/* TODO Add alt text to preformat data */
+				return;
+			}
+			break;
 		case '#':
-		       printf("parse header\n");	
-		       break;
+			line_type = HEADING_1;
+			break;
 		case '*':
-		       printf("parse list\n");	
-		       break;
+			line_type = LIST;
+			break;
 		case '>':
-		       printf("parse paragraph\n");	
-		       break;
-		default:
-		       printf("text\n");
-	}
-	
-	// Determine line type		
-	for(int i = 0; i < (int) len; i++) {
-		char c = line[i];
+			line_type = QUOTE;
+			break;
 	}
 
-	return NULL;
+done:
+	g->lines = push_line(g->lines, line_type, line_number, line);
 }
 
 /*
@@ -161,17 +176,37 @@ int
 main(void) 
 {
 	printf("nothing to see... %s\n", "yet");
-	char *gem_test = strdup("All the following examples are valid link lines:\n" 
+	char *gem_test = strdup(
+		"All the following examples are valid link lines:\n"
 	       	"=> gemini://example.org/\n"
 		"=> gemini://example.org/ An example link\n"
 		"=> gemini://example.org/foo     Another example link at the same host"
 		"=> foo/bar/baz.txt      A relative link\n"
-		"=>      gopher://example.org:70/1 A gopher link\n");
+		"=>      gopher://example.org:70/1 A gopher link\n"
+		"```alt text\n"
+		"some preformatted things\n"
+		"=> preformatted link is not a link?\n"
+		"# Or a header\n"
+		"> Or paragraph\n"
+		"```\n"
+		"=> Links should be back\n"
+		"# So should headers\n"
+		"What about text?\n"
+		"> Paragraphs working?\n"
+		"> A verbose one huh?\n"
+		"```\n"
+		"Preformatting again\n"
+		"# Isn't that enough\n"
+		"``` yeah\n"
+	);
 	
 	struct gmi *g = gmi_new();
 	char *text_line;	
-	while( (text_line = strsep(&gem_test, "\n")) != NULL )
-		gmi_parse_line(g, text_line);
+	int line_number = 0;
+	while((text_line = strsep(&gem_test, "\n")) != NULL ) {
+		gmi_parse_line(g, line_number, text_line);
+		line_number++;
+	}
 
 
 	// gmi_parse_line(g, "some other line\n");
@@ -179,7 +214,7 @@ main(void)
 	
 	struct line *l = NULL;
 	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
-		printf("%s\n", l->line);
+		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
 
 	return 0;
 }
