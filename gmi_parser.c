@@ -74,7 +74,6 @@ struct line_list *
 push_line(struct line_list *ll, enum linetype type, int number, char *line)
 {
 	struct line *l;
-
 	if (ll == NULL) {
 		if ((ll = calloc(1, sizeof(*ll))) == NULL) {
 			err(1, NULL);
@@ -88,7 +87,17 @@ push_line(struct line_list *ll, enum linetype type, int number, char *line)
 	l->type = type;
 	l->number = number;
 	l->line = line;
-	SLIST_INSERT_HEAD(ll, l, next);
+	if(ll->slh_first == NULL) {
+		SLIST_INSERT_HEAD(ll, l, next);
+	} else {
+		/* Find the last line and insert after */
+		struct line *l1 = NULL;
+		struct line *tail = NULL;
+		SLIST_FOREACH(l1, ll, next)       /* Forward traversal. */
+			tail = l1;	
+		
+		SLIST_INSERT_AFTER(tail, l, next);
+	}
 
 	return ll;
 }
@@ -129,10 +138,11 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 	if (len <= 0) 
 		return;
 
-	/* If preformat mode is on toggle it off when ``` */
 	if (g->preformat_mode == true) {
 		if (len >= 3) {
+			/* If preformat mode is on toggle it off when ``` */
 			if(line[0] == '`' && line[1] == '`' && line[2] == '`') {
+				/* TODO strip any text following ``` */
 				g->preformat_mode = false;
 				line_type = PRE_TOGGLE;
 				goto done;
