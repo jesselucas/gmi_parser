@@ -21,16 +21,10 @@
  * Unordered list items *
  * Quote lines >
  */
-
-/* notes to self
- * use queue(3) macros
- * use strcep
- * use scanf
- */
-
 enum linetype {
 	TEXT,
 	LINK,
+	LINK_IMG,
 	PRE_TOGGLE,
 	PRE_TEXT,
 	HEADING_1,
@@ -44,7 +38,6 @@ struct line 		*line_new();
 struct line_list 	*push_line(struct line_list *, enum linetype, int, char *);
 struct gmi		*gmi_new();
 void		 	 gmi_parse_line(struct gmi *, int, char *);
-struct line		*line_parse(char *);
 
 struct line {
 	SLIST_ENTRY(line) 	 next;
@@ -155,12 +148,13 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 
 	switch (line[0]) {
 		case '=':
+			/* TODO check for image extension 
+			 * and use LINK_IMG */
 			line_type = LINK;
 			break;
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {
 				g->preformat_mode = true;
-				/* TODO Add alt text to preformat data */
 				return;
 			}
 			break;
@@ -209,7 +203,8 @@ main(void)
 		"# Isn't that enough\n"
 		"``` yeah\n"
 	);
-	
+
+	/* Create new gmi and add all lines */	
 	struct gmi *g = gmi_new();
 	char *text_line;	
 	int line_number = 0;
@@ -219,9 +214,7 @@ main(void)
 	}
 
 
-	// gmi_parse_line(g, "some other line\n");
-	// gmi_parse_line(g, "third line\n");
-	
+	/* Print all lines in gmi struct */
 	struct line *l = NULL;
 	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
 		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
