@@ -20,6 +20,11 @@
  * Heading lines #, ##, ###
  * Unordered list items *
  * Quote lines >
+ *
+ * TODO
+ * Convert to library
+ * Write proper tests
+ * Write example 
  */
 enum linetype {
 	TEXT,
