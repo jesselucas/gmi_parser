@@ -46,7 +46,7 @@ struct gmi		*gmi_new();
 void		 	 gmi_parse_line(struct gmi *, int, char *);
 void			 gmi_free(struct gmi *);
 
-struct line		*parse_line_link(enum linetype, int, char *);
+struct line		*parse_line(enum linetype, int, char *);
 
 struct line {
 	SLIST_ENTRY(line) 	 next;
