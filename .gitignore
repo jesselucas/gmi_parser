@@ -1,2 +1,4 @@
+test_gmi_parser
 *.out
 *.core
+vgcore.*

@@ -40,23 +40,26 @@ enum linetype {
 };
 
 struct line 		*line_new();
-struct line_list 	*push_line(struct line_list *, enum linetype, int, char *);
+struct line_list 	*push_line(struct line_list *, struct line *);
+void			 line_free(struct line *);
 struct gmi		*gmi_new();
 void		 	 gmi_parse_line(struct gmi *, int, char *);
+void			 gmi_free(struct gmi *);
+
+struct line		*parse_line_link(enum linetype, int, char *);
 
 struct line {
 	SLIST_ENTRY(line) 	 next;
 	int 			 number;
 	enum linetype 		 type;
 	char 			*line;
-	_Bool			 preformatted;
 };
 SLIST_HEAD(line_list, line);
 
 /*
  * Create a new line struct to represent
  * each of the line types. Typically stored on
- * a gmi struct 
+ * a gmi struct
  */
 struct line *
 line_new()
@@ -69,35 +72,49 @@ line_new()
 }
 
 struct line_list *
-push_line(struct line_list *ll, enum linetype type, int number, char *line)
+push_line(struct line_list *ll, struct line *l)
 {
-	struct line *l;
 	if (ll == NULL) {
 		if ((ll = calloc(1, sizeof(*ll))) == NULL) {
 			err(1, NULL);
 		}
 		SLIST_INIT(ll);
 	}
-	if ((l = calloc(1, sizeof(*l))) == NULL) {
-		free(ll);
-		err(1, NULL);
-	}
-	l->type = type;
-	l->number = number;
-	l->line = line;
+
+	if (l == NULL)
+		err(1, "l is NULL");
+
+	/* Check to see if the line list has a head */
 	if(ll->slh_first == NULL) {
 		SLIST_INSERT_HEAD(ll, l, next);
 	} else {
 		/* Find the last line and insert after */
 		struct line *l1 = NULL;
 		struct line *tail = NULL;
-		SLIST_FOREACH(l1, ll, next)       /* Forward traversal. */
-			tail = l1;	
+		SLIST_FOREACH(l1, ll, next)	/* Forward traversal. */
+			tail = l1;
 		
 		SLIST_INSERT_AFTER(tail, l, next);
 	}
-
 	return ll;
+}
+
+void
+line_free(struct line *l)
+{
+	l->line = NULL;
+	l->number = 0;
+	free(l);
+}
+
+struct line *
+parse_line(enum linetype type, int number, char *line) {
+	struct line *l = line_new();
+	l->type = type;
+	l->number = number;
+	l->line = line;
+
+	return l;
 }
 
 struct gmi {
@@ -106,7 +123,7 @@ struct gmi {
 };
 
 /*
- * Create a new gmi struct to represent the entirity 
+ * Create a new gmi struct to represent the entirity
  * of a single .gmi document
  */
 struct gmi *
@@ -115,7 +132,6 @@ gmi_new()
 	struct gmi *g;
 	if ((g = calloc(1, sizeof(struct gmi))) == NULL)
 		err(1, NULL);
-	g->lines = NULL;
 
 	return g;
 }
@@ -127,35 +143,34 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 	if(g == NULL)
 		err(1, NULL);
 
-	if (line == NULL) 
+	if (line == NULL)
 		err(1, NULL);
 
-	enum linetype line_type = TEXT;
-
-	size_t len = strlen(line);	
-	if (len <= 0) 
+	size_t len = strlen(line);
+	if (len <= 0)
 		return;
 
+	struct line *l = NULL;
 	if (g->preformat_mode == true) {
 		if (len >= 3) {
 			/* If preformat mode is on toggle it off when ``` */
 			if(line[0] == '`' && line[1] == '`' && line[2] == '`') {
 				/* TODO strip any text following ``` */
 				g->preformat_mode = false;
-				line_type = PRE_TOGGLE;
+				l = parse_line(PRE_TOGGLE, line_number, line);
 				goto done;
 			}
 		}
 
-		line_type = PRE_TEXT;
+		l = parse_line(PRE_TEXT, line_number, line);
 		goto done;
 	}
 
 	switch (line[0]) {
 		case '=':
-			/* TODO check for image extension 
+			/* TODO check for image extension
 			 * and use LINK_IMG */
-			line_type = LINK;
+			l = parse_line(LINK, line_number, line);
 			break;
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {
@@ -164,28 +179,54 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 			}
 			break;
 		case '#':
-			line_type = HEADING_1;
+			l = parse_line(HEADING_1, line_number, line);
 			break;
 		case '*':
-			line_type = LIST;
+			l = parse_line(LIST, line_number, line);
 			break;
 		case '>':
-			line_type = QUOTE;
+			l = parse_line(QUOTE, line_number, line);
+			break;
+		default:
+			l = parse_line(TEXT, line_number, line);
 			break;
 	}
 
 done:
-	g->lines = push_line(g->lines, line_type, line_number, line);
+	g->lines = push_line(g->lines, l);
+}
+
+/* Free any allocated memory associated with a gmi struct */
+void
+gmi_free(struct gmi *g)
+{
+	struct line *l = NULL;
+	while (!SLIST_EMPTY(g->lines)) {
+		l = SLIST_FIRST(g->lines);
+		SLIST_REMOVE_HEAD(g->lines, next);
+		line_free(l);
+	}
+	/*
+	SLIST_FOREACH(l, g->lines, next)
+		SLIST_REMOVE_HEAD(g->lines, next);
+		line_free(l);
+		*/
+
+	free(g->lines);
+	g->lines = NULL;
+	free(g);
 }
 
 /*
  * main currently used for testing
  */
 int
-main(void) 
+main(void)
 {
-	printf("nothing to see... %s\n", "yet");
-	char *gem_test = strdup(
+	printf("nothing to see... yet\n");
+	
+	char *gem_test;
+	gem_test = strdup(
 		"All the following examples are valid link lines:\n"
 	       	"=> gemini://example.org/\n"
 		"=> gemini://example.org/ An example link\n"
@@ -206,23 +247,30 @@ main(void)
 		"```\n"
 		"Preformatting again\n"
 		"# Isn't that enough\n"
-		"``` yeah\n"
-	);
+		"``` yeah\n\0");
+	if (gem_test == NULL)
+		err(1, NULL);
 
-	/* Create new gmi and add all lines */	
+	/* Create new gmi and add all lines */
 	struct gmi *g = gmi_new();
-	char *text_line;	
 	int line_number = 0;
-	while((text_line = strsep(&gem_test, "\n")) != NULL ) {
+
+	char *gem_test_ref = gem_test;
+	char *text_line = strsep(&gem_test_ref, "\n");
+	printf("text line? %s\n", text_line);
+	while(text_line != NULL ) {
 		gmi_parse_line(g, line_number, text_line);
+		text_line = strsep(&gem_test_ref, "\n");
 		line_number++;
 	}
 
-
 	/* Print all lines in gmi struct */
 	struct line *l = NULL;
-	SLIST_FOREACH(l, g->lines, next)       /* Forward traversal. */
+	SLIST_FOREACH(l, g->lines, next)
 		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
+
+	gmi_free(g);
+	free(gem_test);
 
 	return 0;
 }
