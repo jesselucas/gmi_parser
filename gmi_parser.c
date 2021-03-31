@@ -5,6 +5,8 @@
 #include <err.h>
 #include <sys/queue.h>
 
+#include "gmi_parser.h"
+
 /*
  * Simple text/gemini parser
  * https://gitlab.com/gemini-specification/gemini-text/-/blob/master/specification.gmi
@@ -26,35 +28,11 @@
  * Write proper tests
  * Write example 
  */
-enum linetype {
-	TEXT,
-	LINK,
-	LINK_IMG,
-	PRE_TOGGLE,
-	PRE_TEXT,
-	HEADING_1,
-	HEADING_2,
-	HEADING_3,
-	LIST,
-	QUOTE
-};
 
 struct line 		*line_new();
 struct line_list 	*push_line(struct line_list *, struct line *);
 void			 line_free(struct line *);
-struct gmi		*gmi_new();
-void		 	 gmi_parse_line(struct gmi *, int, char *);
-void			 gmi_free(struct gmi *);
-
 struct line		*parse_line(enum linetype, int, char *);
-
-struct line {
-	SLIST_ENTRY(line) 	 next;
-	int 			 number;
-	enum linetype 		 type;
-	char 			*line;
-};
-SLIST_HEAD(line_list, line);
 
 /*
  * Create a new line struct to represent
@@ -117,10 +95,6 @@ parse_line(enum linetype type, int number, char *line) {
 	return l;
 }
 
-struct gmi {
-	struct line_list 	*lines;
-	_Bool 			 preformat_mode;
-};
 
 /*
  * Create a new gmi struct to represent the entirity
@@ -215,62 +189,4 @@ gmi_free(struct gmi *g)
 	free(g->lines);
 	g->lines = NULL;
 	free(g);
-}
-
-/*
- * main currently used for testing
- */
-int
-main(void)
-{
-	printf("nothing to see... yet\n");
-	
-	char *gem_test;
-	gem_test = strdup(
-		"All the following examples are valid link lines:\n"
-	       	"=> gemini://example.org/\n"
-		"=> gemini://example.org/ An example link\n"
-		"=> gemini://example.org/foo     Another example link at the same host"
-		"=> foo/bar/baz.txt      A relative link\n"
-		"=>      gopher://example.org:70/1 A gopher link\n"
-		"```alt text\n"
-		"some preformatted things\n"
-		"=> preformatted link is not a link?\n"
-		"# Or a header\n"
-		"> Or paragraph\n"
-		"```\n"
-		"=> Links should be back\n"
-		"# So should headers\n"
-		"What about text?\n"
-		"> Paragraphs working?\n"
-		"> A verbose one huh?\n"
-		"```\n"
-		"Preformatting again\n"
-		"# Isn't that enough\n"
-		"``` yeah\n\0");
-	if (gem_test == NULL)
-		err(1, NULL);
-
-	/* Create new gmi and add all lines */
-	struct gmi *g = gmi_new();
-	int line_number = 0;
-
-	char *gem_test_ref = gem_test;
-	char *text_line = strsep(&gem_test_ref, "\n");
-	printf("text line? %s\n", text_line);
-	while(text_line != NULL ) {
-		gmi_parse_line(g, line_number, text_line);
-		text_line = strsep(&gem_test_ref, "\n");
-		line_number++;
-	}
-
-	/* Print all lines in gmi struct */
-	struct line *l = NULL;
-	SLIST_FOREACH(l, g->lines, next)
-		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
-
-	gmi_free(g);
-	free(gem_test);
-
-	return 0;
 }
