@@ -3,7 +3,7 @@
 #include <string.h>
 #include <err.h>
 #include <sys/queue.h>
-
+#include <assert.h>
 #include "gmi_parser.h"
 
 /*
@@ -19,7 +19,7 @@ main(void)
 		"All the following examples are valid link lines:\n"
 	       	"=> gemini://example.org/\n"
 		"=> gemini://example.org/ An example link\n"
-		"=> gemini://example.org/foo     Another example link at the same host"
+		"=> gemini://example.org/foo     Another example link at the same host\n"
 		"=> foo/bar/baz.txt      A relative link\n"
 		"=>      gopher://example.org:70/1 A gopher link\n"
 		"```alt text\n"
@@ -42,21 +42,33 @@ main(void)
 
 	/* Create new gmi and add all lines */
 	struct gmi *g = gmi_new();
-	int line_number = 0;
 
+	int line_number = 0;
 	char *gem_test_ref = gem_test;
-	char *text_line = strsep(&gem_test_ref, "\n");
-	printf("text line? %s\n", text_line);
-	while(text_line != NULL ) {
-		gmi_parse_line(g, line_number, text_line);
-		text_line = strsep(&gem_test_ref, "\n");
-		line_number++;
+	char *text_line;
+	while((text_line = strsep(&gem_test_ref, "\n")) != NULL ) {
+		gmi_parse_line(g, line_number++, text_line);
 	}
 
 	/* Print all lines in gmi struct */
 	struct line *l = NULL;
-	SLIST_FOREACH(l, g->lines, next)
+	int line_total = 0;
+	SLIST_FOREACH(l, g->lines, next) {
 		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
+		line_total++;
+	}
+
+
+	if((line_number - 1) != line_total) {
+		errx(1, "line_number: %d != line_total: %d", line_number, line_total);
+	}
+	/*
+	gem_test_ref = gem_test;
+	while((text_line = strsep(&gem_test_ref, "\n")) != NULL ) {
+	//	gmi_parse_line(g, line_number, text_line);
+	//	line_number++;
+	}
+	*/
 
 	gmi_free(g);
 	free(gem_test);
