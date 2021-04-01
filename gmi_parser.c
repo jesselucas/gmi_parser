@@ -90,13 +90,14 @@ parse_line(enum linetype type, int number, char *line)
 	switch (type) {
 		case TEXT:
 			break;
+		case PRE_TOGGLE:
+			/* strip any text following ``` */
+			break;
+		case PRE_TEXT:
+			break;
 		case LINK:
 			/* TODO check for image extension
 			* and use LINK_IMG */
-			break;
-		case PRE_TOGGLE:
-			break;
-		case PRE_TEXT:
 			break;
 		case HEADING_1:
 			/* TODO determine heading level */
@@ -147,46 +148,45 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 		return;
 
 	struct line *l = NULL;
+	enum linetype type = TEXT;
 	if (g->preformat_mode == true) {
 		if (len >= 3) {
 			/* If preformat mode is on toggle it off when ``` */
 			if(line[0] == '`' && line[1] == '`' && line[2] == '`') {
-				/* TODO strip any text following ``` */
 				g->preformat_mode = false;
-				l = parse_line(PRE_TOGGLE, line_number, line);
+				type = PRE_TOGGLE;
 				goto done;
 			}
 		}
 
-		l = parse_line(PRE_TEXT, line_number, line);
+		type = PRE_TEXT;
 		goto done;
 	}
 
 	switch (line[0]) {
 		case '=':
-			l = parse_line(LINK, line_number, line);
+			type = LINK;
 			break;
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {
 				g->preformat_mode = true;
-				return;
+				type = PRE_TOGGLE;
+				/* TODO add pre_toggle_begin */
 			}
 			break;
 		case '#':
-			l = parse_line(HEADING_1, line_number, line);
+			type = HEADING_1;
 			break;
 		case '*':
-			l = parse_line(LIST, line_number, line);
+			type = LIST;
 			break;
 		case '>':
-			l = parse_line(QUOTE, line_number, line);
-			break;
-		default:
-			l = parse_line(TEXT, line_number, line);
+			type = QUOTE;
 			break;
 	}
 
 done:
+	l = parse_line(type, line_number, line);
 	g->lines = push_line(g->lines, l);
 }
 
@@ -201,10 +201,11 @@ gmi_free(struct gmi *g)
 		line_free(l);
 	}
 	/*
-	SLIST_FOREACH(l, g->lines, next)
+	SLIST_FOREACH(l, g->lines, next) {
 		SLIST_REMOVE_HEAD(g->lines, next);
 		line_free(l);
-		*/
+		}
+	*/
 
 	free(g->lines);
 	g->lines = NULL;
