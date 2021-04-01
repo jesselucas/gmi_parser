@@ -1,4 +1,5 @@
 test_gmi_parser
+*.swp
 *.out
 *.core
 vgcore.*

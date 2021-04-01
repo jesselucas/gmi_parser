@@ -28,7 +28,6 @@
  * Write proper tests
  * Write example 
  */
-
 struct line 		*line_new();
 struct line_list 	*push_line(struct line_list *, struct line *);
 void			 line_free(struct line *);
@@ -86,7 +85,30 @@ line_free(struct line *l)
 }
 
 struct line *
-parse_line(enum linetype type, int number, char *line) {
+parse_line(enum linetype type, int number, char *line)
+{
+	switch (type) {
+		case TEXT:
+			break;
+		case LINK:
+			/* TODO check for image extension
+			* and use LINK_IMG */
+			break;
+		case PRE_TOGGLE:
+			break;
+		case PRE_TEXT:
+			break;
+		case HEADING_1:
+			/* TODO determine heading level */
+			break;
+		case LIST:
+			break;
+		case QUOTE:
+			break;
+		default: {
+			errx(1, "line type: %d is unsupported.\nline:%s\n", type, line);
+		}
+	}
 	struct line *l = line_new();
 	l->type = type;
 	l->number = number;
@@ -142,8 +164,6 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 
 	switch (line[0]) {
 		case '=':
-			/* TODO check for image extension
-			 * and use LINK_IMG */
 			l = parse_line(LINK, line_number, line);
 			break;
 		case '`':
