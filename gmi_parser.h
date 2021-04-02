@@ -24,6 +24,7 @@ SLIST_HEAD(line_list, line);
 
 struct gmi {
 	struct line_list 	*lines;
+	int			 linelen;
 	_Bool 			 preformat_mode;
 };
 

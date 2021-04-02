@@ -4,16 +4,41 @@
 #include <err.h>
 #include <sys/queue.h>
 #include <assert.h>
+#include <wchar.h>
+#include <locale.h>
+
 #include "gmi_parser.h"
 
-void test_lines(char *);
-void test_headers(char *);
+char * gmi_sample(void);
+struct gmi * gmi_from_str(char *);
+
+void test_lines(void);
+void test_headers(void);
 
 /*
  * main used for testing
  */
 int
 main(void)
+{
+	setlocale(LC_CTYPE, "");
+	printf("Running gmi_parser_test...\n");
+
+	/* Run tests */
+	test_lines();
+	test_headers();
+
+	/* Finished */
+	wchar_t star = 0x2605;
+	wprintf(L"%lcAll tests passed%lc\n", star, star);
+	return 0;
+}
+
+/* Return allocated string of a sample gmi file
+ * must be free'd
+ */
+char *
+gmi_sample(void)
 {
 	char *gem_text;
 	gem_text = strdup(
@@ -41,51 +66,69 @@ main(void)
 	if (gem_text == NULL)
 		err(1, NULL);
 
-	test_lines(gem_text);
+	return gem_text;
+}
 
-	/* clean up */
-	free(gem_text);
-	return 0;
+struct gmi *
+gmi_from_str(char *str)
+{
+	/* Create new gmi and add all lines */
+	struct gmi *g = gmi_new();
+	int line_number = 0;
+	char *str_ref = str;
+	char *text_line;
+	while((text_line = strsep(&str_ref, "\n")) != NULL ) {
+		gmi_parse_line(g, line_number++, text_line);
+	}
+	g->linelen = line_number;
+
+	return g;
 }
 
 void
-test_lines(char *gem_text) {
-
-	/* Create new gmi and add all lines */
-	struct gmi *g = gmi_new();
-
-	int line_number = 0;
-	char *gem_text_ref = gem_text;
-	char *text_line;
-	while((text_line = strsep(&gem_text_ref, "\n")) != NULL ) {
-		gmi_parse_line(g, line_number++, text_line);
-	}
+test_lines(void)
+{
+	char *gem_text = gmi_sample();
+	struct gmi *g = gmi_from_str(gem_text);
 
 	/* Print all lines in gmi struct */
 	struct line *l = NULL;
-	int line_total = 0;
+	int ltotal = 0;
 	SLIST_FOREACH(l, g->lines, next) {
-		printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
-		line_total++;
+	//	printf("%d: type:%u text:%s\n", l->number, l->type, l->line);
+		ltotal++;
 	}
 
-
-	if((line_number - 1) != line_total) {
-		errx(1, "line_number: %d != line_total: %d", line_number, line_total);
+	if((g->linelen - 1) != ltotal) {
+		errx(1, "line_number: %d != line_total: %d", g->linelen, ltotal);
 	}
-	/*
-	gem_test_ref = gem_test;
-	while((text_line = strsep(&gem_test_ref, "\n")) != NULL ) {
-	//	gmi_parse_line(g, line_number, text_line);
-	//	line_number++;
-	}
-	*/
-
 	gmi_free(g);
+	free(gem_text);
 }
 
 void
-test_headers(char *gem_text)
+test_headers(void)
 {
-	printf("text %s", gem_text);
+	char *headers;
+	headers = strdup(
+		"# Header 1\n"
+		"## Header 1\n"
+		"### Header 1\n"
+		"###                    Header space    \n"
+		"#1## Header 1\n"
+		"##1# Header 2\n\0"
+	);
+
+	struct line *l = NULL;
+	struct gmi *g = gmi_from_str(headers);
+	int ltotal = 0;
+	SLIST_FOREACH(l, g->lines, next) {
+	//	printf("Headers: %d: type:%u text:%s\n", l->number, l->type, l->line);
+		ltotal++;
+	}
+	if((g->linelen - 1) != ltotal) {
+		errx(1, "line_number: %d != line_total: %d", g->linelen, ltotal);
+	}
+
+	free(headers);
 }

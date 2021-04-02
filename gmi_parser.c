@@ -28,7 +28,7 @@
  * Write proper tests
  * Write example 
  */
-struct line 		*line_new();
+struct line 		*line_new(void);
 struct line_list 	*push_line(struct line_list *, struct line *);
 void			 line_free(struct line *);
 struct line		*parse_line(enum linetype, int, char *);
@@ -39,7 +39,7 @@ struct line		*parse_line(enum linetype, int, char *);
  * a gmi struct
  */
 struct line *
-line_new()
+line_new(void)
 {
 	struct line *l;
 	if ((l = calloc(1, sizeof(struct line))) == NULL)
@@ -79,38 +79,43 @@ push_line(struct line_list *ll, struct line *l)
 void
 line_free(struct line *l)
 {
+	if(l == NULL)
+		return;
 	l->line = NULL;
 	l->number = 0;
 	free(l);
+	l = NULL;
 }
 
 struct line *
 parse_line(enum linetype type, int number, char *line)
 {
+	if (line == NULL)
+		err(1, "line is NULL");
+
 	switch (type) {
 		case TEXT:
 			break;
-		case PRE_TOGGLE_BEGIN:
-			break;
 		case PRE_TOGGLE_END:
 			/* strip any text following ``` */
+		case PRE_TOGGLE_BEGIN:
 			break;
 		case PRE_TEXT:
 			break;
 		case LINK:
-			/* TODO check for image extension
-			* and use LINK_IMG */
+		case LINK_IMG:
+			/* TODO check for image extension */
 			break;
 		case HEADING_1:
-			/* TODO determine heading level */
+			break;
+		case HEADING_2:
+			break;
+		case HEADING_3:
 			break;
 		case LIST:
 			break;
 		case QUOTE:
 			break;
-		default: {
-			errx(1, "line type: %d is unsupported.\nline:%s\n", type, line);
-		}
 	}
 	struct line *l = line_new();
 	l->type = type;
@@ -202,6 +207,9 @@ done:
 void
 gmi_free(struct gmi *g)
 {
+	if (g == NULL)
+		return;
+
 	struct line *l = NULL;
 	while (!SLIST_EMPTY(g->lines)) {
 		l = SLIST_FIRST(g->lines);
