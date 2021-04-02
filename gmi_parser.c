@@ -90,7 +90,9 @@ parse_line(enum linetype type, int number, char *line)
 	switch (type) {
 		case TEXT:
 			break;
-		case PRE_TOGGLE:
+		case PRE_TOGGLE_BEGIN:
+			break;
+		case PRE_TOGGLE_END:
 			/* strip any text following ``` */
 			break;
 		case PRE_TEXT:
@@ -154,7 +156,7 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 			/* If preformat mode is on toggle it off when ``` */
 			if(line[0] == '`' && line[1] == '`' && line[2] == '`') {
 				g->preformat_mode = false;
-				type = PRE_TOGGLE;
+				type = PRE_TOGGLE_END;
 				goto done;
 			}
 		}
@@ -170,12 +172,18 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {
 				g->preformat_mode = true;
-				type = PRE_TOGGLE;
-				/* TODO add pre_toggle_begin */
+				type = PRE_TOGGLE_BEGIN;
 			}
 			break;
 		case '#':
+			/* Determing header level */
 			type = HEADING_1;
+			if (len >= 2 && line[1] == '#') {
+				type = HEADING_2;
+			}
+			if (len >= 3 && line[1] == '#' && line[2] == '#') {
+				type = HEADING_3;
+			}
 			break;
 		case '*':
 			type = LIST;
