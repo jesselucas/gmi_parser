@@ -6,16 +6,17 @@
 #include <assert.h>
 #include "gmi_parser.h"
 
+void test_lines(char *);
+void test_headers(char *);
+
 /*
- * main currently used for testing
+ * main used for testing
  */
 int
 main(void)
 {
-	printf("nothing to see... yet\n");
-	
-	char *gem_test;
-	gem_test = strdup(
+	char *gem_text;
+	gem_text = strdup(
 		"All the following examples are valid link lines:\n"
 	       	"=> gemini://example.org/\n"
 		"=> gemini://example.org/ An example link\n"
@@ -37,16 +38,26 @@ main(void)
 		"Preformatting again\n"
 		"# Isn't that enough\n"
 		"``` yeah\n\0");
-	if (gem_test == NULL)
+	if (gem_text == NULL)
 		err(1, NULL);
+
+	test_lines(gem_text);
+
+	/* clean up */
+	free(gem_text);
+	return 0;
+}
+
+void
+test_lines(char *gem_text) {
 
 	/* Create new gmi and add all lines */
 	struct gmi *g = gmi_new();
 
 	int line_number = 0;
-	char *gem_test_ref = gem_test;
+	char *gem_text_ref = gem_text;
 	char *text_line;
-	while((text_line = strsep(&gem_test_ref, "\n")) != NULL ) {
+	while((text_line = strsep(&gem_text_ref, "\n")) != NULL ) {
 		gmi_parse_line(g, line_number++, text_line);
 	}
 
@@ -71,7 +82,10 @@ main(void)
 	*/
 
 	gmi_free(g);
-	free(gem_test);
+}
 
-	return 0;
+void
+test_headers(char *gem_text)
+{
+	printf("text %s", gem_text);
 }

@@ -7,7 +7,7 @@ test:
 all: test
 
 valgrind: all
-	valgrind --leak-check=full --show-leak-kinds=all ./test_gmi_parser 
+	valgrind --leak-check=full --show-leak-kinds=all ./test_*
 
 tidy:
-	clang-tidy gmi_parser.c
+	clang-tidy *.c
