@@ -118,16 +118,24 @@ test_headers(void)
 		"#1## Header 1\n"
 		"##1# Header 2\n\0"
 	);
+	enum linetype header_types[6] = {
+		HEADING_1,
+		HEADING_2,
+		HEADING_3,
+		HEADING_3,
+		HEADING_1,
+		HEADING_2,
+	};
 
 	struct line *l = NULL;
 	struct gmi *g = gmi_from_str(headers);
 	int ltotal = 0;
 	SLIST_FOREACH(l, g->lines, next) {
-	//	printf("Headers: %d: type:%u text:%s\n", l->number, l->type, l->line);
+		enum linetype type = header_types[ltotal];
+		if(l->type != type){
+			errx(1, "\"%s\" type: %d should equal %d", l->line, l->type, type);
+		}
 		ltotal++;
-	}
-	if((g->linelen - 1) != ltotal) {
-		errx(1, "line_number: %d != line_total: %d", g->linelen, ltotal);
 	}
 
 	free(headers);
