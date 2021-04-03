@@ -33,6 +33,8 @@ struct line_list 	*push_line(struct line_list *, struct line *);
 void			 line_free(struct line *);
 struct line		*parse_line(enum linetype, int, char *);
 
+static char *image_ext[4] = {"gif", "jpeg", "jpg", "png"};
+
 /*
  * Create a new line struct to represent
  * each of the line types. Typically stored on
@@ -103,8 +105,8 @@ parse_line(enum linetype type, int number, char *line)
 		case PRE_TEXT:
 			break;
 		case LINK:
+			break;
 		case LINK_IMG:
-			/* TODO check for image extension */
 			break;
 		case HEADING_1:
 			break;
@@ -172,7 +174,26 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 
 	switch (line[0]) {
 		case '=':
+			if(len < 2 || line[1] != '>')
+				goto done;
+
 			type = LINK;
+
+			/* Check for image extension
+			 * Only supports small set of extensions
+			 * https://www.iana.org/assignments/media-types/media-types.xhtml#image
+			 * TODO: reverse search to only look for extenstions
+			 */
+			char *ext = strchr(line, '.');
+			if (ext == NULL)
+				goto done;
+
+			int extlen = sizeof(image_ext)/sizeof(*image_ext);
+			for(int i = 0; i < extlen; ++i) {
+				if(strcmp(ext + 1, image_ext[i]) == 0)
+					type = LINK_IMG;
+			}
+
 			break;
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {

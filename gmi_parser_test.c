@@ -14,6 +14,7 @@ struct gmi * gmi_from_str(char *);
 
 void test_lines(void);
 void test_headers(void);
+void test_links(void);
 
 /*
  * main used for testing
@@ -27,6 +28,7 @@ main(void)
 	/* Run tests */
 	test_lines();
 	test_headers();
+	test_links();
 
 	/* Finished */
 	wchar_t star = 0x2605;
@@ -139,4 +141,39 @@ test_headers(void)
 	}
 
 	free(headers);
+}
+
+void
+test_links(void)
+{
+	char *links;
+	links = strdup(
+		"=>link\n"
+		"=not a link\n"
+		"=> Link 2\n"
+		"=>                    Link space    \n"
+		"=> image.png\n"
+		"=> image.jpeg\n\0"
+	);
+	enum linetype link_types[6] = {
+		LINK,
+		TEXT,
+		LINK,
+		LINK,
+		LINK_IMG,
+		LINK_IMG,
+	};
+
+	struct line *l = NULL;
+	struct gmi *g = gmi_from_str(links);
+	int ltotal = 0;
+	SLIST_FOREACH(l, g->lines, next) {
+		enum linetype type = link_types[ltotal];
+		if(l->type != type){
+			errx(1, "\"%s\" type: %d should equal %d", l->line, l->type, type);
+		}
+		ltotal++;
+	}
+
+	free(links);
 }
