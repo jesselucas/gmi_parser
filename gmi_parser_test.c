@@ -153,15 +153,19 @@ test_links(void)
 		"=> Link 2\n"
 		"=>                    Link space    \n"
 		"=> image.png\n"
-		"=> image.jpeg\n\0"
+		"=> image.jpeg\n"
+		"=> gemini://some.space/images/image.jpeg\n"
+		"=> gemini://some.space/images/\n\0"
 	);
-	enum linetype link_types[6] = {
+	enum linetype link_types[8] = {
 		LINK,
 		TEXT,
 		LINK,
 		LINK,
 		LINK_IMG,
 		LINK_IMG,
+		LINK_IMG,
+		LINK,
 	};
 
 	struct line *l = NULL;

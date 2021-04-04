@@ -182,16 +182,20 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 			/* Check for image extension
 			 * Only supports small set of extensions
 			 * https://www.iana.org/assignments/media-types/media-types.xhtml#image
-			 * TODO: reverse search to only look for extenstions
 			 */
-			char *ext = strchr(line, '.');
+			int dot = '.';	
+			char *ext = strchr(line, dot);
 			if (ext == NULL)
 				goto done;
 
 			int extlen = sizeof(image_ext)/sizeof(*image_ext);
-			for(int i = 0; i < extlen; ++i) {
-				if(strcmp(ext + 1, image_ext[i]) == 0)
-					type = LINK_IMG;
+			while(ext != NULL) {
+				ext = ext + 1;
+				for(int i = 0; i < extlen; ++i) {
+					if(strcmp(ext, image_ext[i]) == 0)
+						type = LINK_IMG;
+				}
+				ext = strchr(ext, dot);
 			}
 
 			break;
