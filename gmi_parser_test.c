@@ -140,6 +140,7 @@ test_headers(void)
 		ltotal++;
 	}
 
+	gmi_free(g);
 	free(headers);
 }
 
@@ -179,5 +180,6 @@ test_links(void)
 		ltotal++;
 	}
 
+	gmi_free(g);
 	free(links);
 }
