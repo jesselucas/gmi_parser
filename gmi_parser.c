@@ -105,9 +105,31 @@ parse_line(enum linetype type, int number, char *line)
 		case PRE_TEXT:
 			break;
 		case LINK:
+		{
+			/* Check for image extension
+			 * Only supports small set of extensions
+			 * https://www.iana.org/assignments/media-types/media-types.xhtml#image
+			 */
+			int dot = '.';
+			char *ext = strchr(line, dot);
+			if (ext == NULL)
+				break;
+
+			int extlen = sizeof(image_ext)/sizeof(*image_ext);
+			char *ext_ref = ext;
+			while(ext_ref != NULL) {
+				ext = ext + 1;
+				ext_ref = strchr(ext, dot);
+				if(ext_ref != NULL) {
+					ext = ext_ref;
+				}
+			}
+			for(int i = 0; i < extlen; ++i) {
+				if(strcmp(ext, image_ext[i]) == 0)
+					type = LINK_IMG;
+			}
 			break;
-		case LINK_IMG:
-			break;
+		}
 		case HEADING_1:
 			break;
 		case HEADING_2:
@@ -118,6 +140,8 @@ parse_line(enum linetype type, int number, char *line)
 			break;
 		case QUOTE:
 			break;
+		default:
+			errx(1, "type: %d not supported", type);
 	}
 	struct line *l = line_new();
 	l->type = type;
@@ -178,26 +202,6 @@ gmi_parse_line(struct gmi *g, int line_number, char *line)
 				goto done;
 
 			type = LINK;
-
-			/* Check for image extension
-			 * Only supports small set of extensions
-			 * https://www.iana.org/assignments/media-types/media-types.xhtml#image
-			 */
-			int dot = '.';	
-			char *ext = strchr(line, dot);
-			if (ext == NULL)
-				goto done;
-
-			int extlen = sizeof(image_ext)/sizeof(*image_ext);
-			while(ext != NULL) {
-				ext = ext + 1;
-				for(int i = 0; i < extlen; ++i) {
-					if(strcmp(ext, image_ext[i]) == 0)
-						type = LINK_IMG;
-				}
-				ext = strchr(ext, dot);
-			}
-
 			break;
 		case '`':
 			if (len >= 3 && line[1] == '`' && line[2] == '`') {
