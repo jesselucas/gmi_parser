@@ -3,3 +3,7 @@ test_gmi_parser
 *.out
 *.core
 vgcore.*
+
+# zig
+zig-cache
+zig-out
