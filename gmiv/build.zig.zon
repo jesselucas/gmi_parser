@@ -1,0 +1,11 @@
+.{
+    .name = "gmiv",
+    .version = "0.0.1",
+
+    .dependencies = .{
+        .gmi_parser = .{
+            .url = "https://github.com/jesselucas/gmi_parser/archive/refs/heads/zig.tar.gz",
+			.hash = "122079cf5916807cbe234858e768793448a4a4888037f4874e0ba1726a01b49e436f",
+        }
+    }
+}
