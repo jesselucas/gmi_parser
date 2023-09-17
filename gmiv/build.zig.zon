@@ -5,7 +5,11 @@
     .dependencies = .{
         .gmi_parser = .{
             .url = "https://github.com/jesselucas/gmi_parser/archive/refs/heads/zig.tar.gz",
-			.hash = "122079cf5916807cbe234858e768793448a4a4888037f4874e0ba1726a01b49e436f",
-        }
+			.hash = "1220b41d65820eab367f2f359e583af9edf113f2269c41024fc0cdef2e244a00370b",
+        },
+		.spoon = .{
+			.url = "https://github.com/jesselucas/zig-spoon/archive/refs/heads/master.tar.gz",
+			.hash = "1220b29dbae33a9dd019cc9f6e4a8c722dec892163fd9f21cd45783a52cc35b42928",
+		}
     }
 }
