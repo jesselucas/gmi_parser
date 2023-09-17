@@ -22,6 +22,7 @@ pub const Line = struct {
 
 pub const Gmi = struct {
     content: []const u8,
+    parsed_line_index: usize = 0,
     position: usize,
     preformat_mode: bool,
     lines: std.ArrayList(Line),
@@ -41,14 +42,22 @@ pub const Gmi = struct {
         }
 
         // Find the next newline character
-        const next_position = std.mem.indexOf(u8, self.content[self.position..], "\n") orelse self.content.len;
+        const next_newline_position = std.mem.indexOf(u8, self.content[self.position..], "\n") orelse (self.content.len - self.position);
+        const next_position = self.position + next_newline_position;
+
+        // Make sure the slice is within bounds
+        if (self.position > next_position or next_position > self.content.len) {
+            return null;
+        }
 
         // Extract line and update position
         const line = self.content[self.position..next_position];
         self.position = next_position + 1;
+        defer self.parsed_line_index += 1;
 
-        // Parse line and return GemtextLine enum
-        return parseLine(self.position, line);
+        return self.parseLine(self.parsed_line_index, line) catch {
+            return null;
+        };
     }
 
     pub fn appendLine(self: *Gmi, new_line: Line) !void {
@@ -63,7 +72,7 @@ pub const Gmi = struct {
         return false;
     }
 
-    pub fn parseLine(self: *Gmi, line_number: usize, line: []const u8) !void {
+    pub fn parseLine(self: *Gmi, line_number: usize, line: []const u8) !Line {
         var line_type = LineType.Text;
 
         if (self.preformat_mode) {
@@ -97,35 +106,78 @@ pub const Gmi = struct {
 
         const new_line = Line{ .line_type = line_type, .number = line_number, .line = line };
         try self.appendLine(new_line);
+        return new_line;
     }
 
     pub fn deinit(self: *Gmi) void {
         self.lines.deinit();
     }
-
-    // Zig test for line types
-    test "testLines" {
-        const test_allocator = std.testing.allocator;
-
-        const content = "All the following examples are valid link lines:\n" ++
-            "=> gemini://example.org/\n" ++
-            "=> gemini://example.org/ An example link\n";
-
-        var gmi = Gmi.init(test_allocator, content);
-        defer gmi.deinit();
-
-        var lines = std.ArrayList(Line).init(test_allocator);
-        defer lines.deinit();
-
-        var i: usize = 1;
-        while (gmi.next()) |line| {
-            try lines.append(line);
-            try std.testing.expectEqual(line.number, i);
-            i += 1;
-        }
-        try std.testing.expectEqual(lines.items.len, 3);
-    }
 };
+
+test "testLines" {
+    const test_allocator = std.testing.allocator;
+
+    const content = "All the following examples are valid link lines:\n" ++
+        "=> gemini://example.org/\n" ++
+        "=> gemini://example.org/ An example link\n";
+
+    var gmi = Gmi.init(test_allocator, content);
+    defer gmi.deinit();
+
+    var lines = std.ArrayList(Line).init(test_allocator);
+    defer lines.deinit();
+
+    var i: usize = 0;
+    while (gmi.next()) |line| {
+        try lines.append(line);
+        try std.testing.expectEqual(line.number, i);
+        i += 1;
+    }
+    try std.testing.expectEqual(lines.items.len, 3);
+}
+
+test "testHeaders" {
+    const test_allocator = std.testing.allocator;
+    const content = "# Header 1\n## Header 2\n### Header 3\n";
+    var gmi = Gmi.init(test_allocator, content);
+    defer gmi.deinit();
+
+    var lines = std.ArrayList(Line).init(test_allocator);
+    defer lines.deinit();
+
+    const expected_types = &[_]LineType{ LineType.Heading1, LineType.Heading2, LineType.Heading3 };
+
+    var i: usize = 0;
+    while (gmi.next()) |line| {
+        try lines.append(line);
+        try std.testing.expectEqual(line.line_type, expected_types[i]);
+        try std.testing.expectEqual(line.number, i);
+        i += 1;
+    }
+    try std.testing.expectEqual(lines.items.len, 3);
+}
+
+test "testLinks" {
+    const test_allocator = std.testing.allocator;
+    const content = "=> link\n=> image.png\n= not a link\n";
+    var gmi = Gmi.init(test_allocator, content);
+    defer gmi.deinit();
+
+    var lines = std.ArrayList(Line).init(test_allocator);
+    defer lines.deinit();
+
+    const expected_types = &[_]LineType{ LineType.Link, LineType.LinkImg, LineType.Text };
+
+    var i: usize = 0;
+    while (gmi.next()) |line| {
+        try lines.append(line);
+        try std.testing.expectEqual(line.line_type, expected_types[i]);
+        try std.testing.expectEqual(line.number, i);
+        i += 1;
+    }
+    try std.testing.expectEqual(lines.items.len, 3);
+}
+
 //    pub fn testHeaders() void {
 //        const test_allocator = std.testing.allocator;
 //        var gmi = Gmi.init(test_allocator);
