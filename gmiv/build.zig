@@ -15,11 +15,6 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const spoon_dep = b.dependency("spoon", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
     const gmi_parser_dep = b.dependency("gmi_parser", .{
         .target = target,
         .optimize = optimize,
@@ -34,7 +29,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.addModule("spoon", spoon_dep.module("spoon"));
     exe.addModule("gmi_parser", gmi_parser_dep.module("gmi_parser"));
     //    exe.linkLibrary(gmi_parser.artifact("gmi_parser"));
 

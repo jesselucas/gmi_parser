@@ -1,0 +1,12 @@
+# This is a header
+
+Hello, this is a text line in a Gemtext file.
+
+=> https://example.com Go to Example.com
+
+## This is a sub-header
+
+Another text line here.
+
+=> https://another-example.com Another link here
+

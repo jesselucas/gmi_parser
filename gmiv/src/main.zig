@@ -1,24 +1,50 @@
 const std = @import("std");
+const Gmi = @import("gmi_parser").Gmi;
+const SGR = @import("ansi.zig").SGR;
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    const allocator = std.heap.page_allocator;
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const args = try std.process.argsAlloc(allocator);
+    defer allocator.free(args);
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    if (args.len != 2) {
+        std.debug.print("Usage: {s} [path to gemtext file]\n", .{args[0]});
+        return;
+    }
 
-    try bw.flush(); // don't forget to flush!
-}
+    // Step 3: Read Gemtext file from disk.
+    const file_path = args[1];
+    const file = try std.fs.cwd().openFile(file_path, .{});
+    defer file.close();
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    const content = try file.readToEndAlloc(allocator, 0); // 0 means no maximum size limit.
+    defer allocator.free(content);
+
+    // Step 4: Parse the Gemtext content.
+    var gmi = Gmi.init(allocator, content);
+
+    while (gmi.next()) |line| {
+        switch (line.line_type) {
+            .Text => {
+                std.debug.print("{s}\n", .{line.line});
+            },
+            .Link => {
+                std.debug.print("{s}{s} -> {s}\n", .{
+                    SGR.FgBlue.ansiCode(),
+                    line.line,
+                    SGR.Reset.ansiCode(),
+                });
+            },
+            .Heading1 => {
+                std.debug.print("{s}{s}{s}\n", .{
+                    SGR.Bold.ansiCode(),
+                    line.line,
+                    SGR.Reset.ansiCode(),
+                });
+            },
+            // ... handle other line types similarly
+            else => {},
+        }
+    }
 }

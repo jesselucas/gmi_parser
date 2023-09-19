@@ -3,7 +3,7 @@ const expect = std.testing.expect;
 
 /// SGR (Select Graphic Rendition) parameters
 /// https://en.wikipedia.org/wiki/ANSI_escape_code
-const SGR = enum(u7) {
+pub const SGR = enum(u7) {
     Reset = 0,
     Bold = 1,
     Faint = 2,
